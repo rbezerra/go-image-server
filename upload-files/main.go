@@ -1,55 +1,105 @@
 package main
 
 import (
+	"crypto/rand"
 	"fmt"
-	"hash/fnv"
 	"io/ioutil"
+	"log"
+	"mime"
 	"net/http"
+	"os"
+	"path/filepath"
 )
 
-func uploadFile(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("File Upload Endpoint Hit")
+const uploadPath = "./temp-images"
 
-	r.ParseMultipartForm(10 << 20)
+func uploadFile() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("File Upload Endpoint Hit")
 
-	file, handler, err := r.FormFile("image")
+		r.ParseMultipartForm(10 << 20)
 
-	if err != nil {
-		fmt.Println("Error retrieving the file")
-		fmt.Println(err)
-		return
-	}
-	defer file.Close()
-	fmt.Printf("Uploaded File: %+v\n", handler.Filename)
-	fmt.Printf("File Size: %+v\n", handler.Size)
-	fmt.Printf("MIME Header: %+v\n", handler.Header)
+		file, handler, err := r.FormFile("image")
 
-	tempFileName := "image-" + createHashFileName(handler.Filename) + ".png"
-	tempFile, err := ioutil.TempFile("./temp-images", tempFileName)
-	if err != nil {
-		fmt.Println("Error creating the temp file in disk")
-		fmt.Println(err)
-	}
-	defer tempFile.Close()
+		if err != nil {
+			renderError(w, "INVALID_FILE", http.StatusBadRequest)
+			fmt.Println("INVALID_FILE")
+			fmt.Println(err)
+			return
+		}
+		defer file.Close()
+		fmt.Printf("Uploaded File: %+v\n", handler.Filename)
+		fmt.Printf("File Size: %+v\n", handler.Size)
+		fmt.Printf("MIME Header: %+v\n", handler.Header)
 
-	fileBytes, err := ioutil.ReadAll(file)
-	if err != nil {
-		fmt.Println("Error saving the file in disk")
-		fmt.Println(err)
-	}
-	tempFile.Write(fileBytes)
+		fileBytes, err := ioutil.ReadAll(file)
+		if err != nil {
+			renderError(w, "INVALID_FILE", http.StatusInternalServerError)
+			fmt.Println("INVALID_FILE")
+			fmt.Println(err)
+		}
 
-	fmt.Fprintf(w, "Successfully Uploaded File\n")
+		filetype := http.DetectContentType(fileBytes)
+		fileName := createUUIDFileName(handler.Filename)
+		switch filetype {
+		case "image/jpeg", "image/jpg", "image/gif", "image/png":
+		default:
+			renderError(w, "INVALID_FILE_TYPE", http.StatusBadRequest)
+			fmt.Println("INVALID_FILE_TYPE")
+			fmt.Println(err)
+			return
+		}
+
+		fileEndings, err := mime.ExtensionsByType(filetype)
+		if err != nil {
+			renderError(w, "CANT_READ_FILE_TYPE", http.StatusInternalServerError)
+			fmt.Println("CANT_READ_FILE_TYPE")
+			fmt.Println(err)
+			return
+		}
+
+		newPath := filepath.Join(uploadPath, fileName+fileEndings[0])
+		fmt.Printf("FileType: %s, File: %s\n", filetype, newPath)
+
+		newFile, err := os.Create(newPath)
+		if err != nil {
+			renderError(w, "CANT_WRITE_FILE", http.StatusInternalServerError)
+			fmt.Println("CANT_WRITE_FILE")
+			fmt.Println(err)
+			return
+		}
+		defer newFile.Close()
+
+		if _, err := newFile.Write(fileBytes); err != nil || newFile.Close() != nil {
+			renderError(w, "CANT_WRITE_FILE", http.StatusInternalServerError)
+			fmt.Println("CANT_WRITE_FILE")
+			fmt.Println(err)
+			return
+		}
+		w.Write([]byte("SUCCESS"))
+	})
 }
 
-func createHashFileName(fileName string) string {
-	h := fnv.New64()
-	h.Write([]byte(fileName))
-	return string(h.Sum64())
+func renderError(w http.ResponseWriter, message string, statusCode int) {
+	w.WriteHeader(http.StatusBadRequest)
+	w.Write([]byte(message))
+}
+
+func createUUIDFileName(fileName string) string {
+
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		log.Fatal(err)
+	}
+	uuid := fmt.Sprintf("%x-%x-%x-%x-%x",
+		b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+
+	return fmt.Sprintf("img-%s", uuid)
 }
 
 func setupRoutes() {
-	http.HandleFunc("/upload", uploadFile)
+	http.HandleFunc("/upload", uploadFile())
 	http.ListenAndServe(":8080", nil)
 }
 
