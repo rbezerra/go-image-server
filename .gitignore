@@ -1,1 +1,3 @@
-.todo*
+*/**/.todo
+*/**/temp-images/*
+!*/**/temp-images/.gitkeep
