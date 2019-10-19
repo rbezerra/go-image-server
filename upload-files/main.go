@@ -9,14 +9,16 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"./db"
 )
 
 const uploadPath = "./temp-images"
 
+var dimensions [5]string = [5]string{"75x75", "75x100", "180x240", "375x500", "768x1024"}
+
 func uploadFile() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("File Upload Endpoint Hit")
-
 		r.ParseMultipartForm(10 << 20)
 
 		file, handler, err := r.FormFile("image")
@@ -80,6 +82,25 @@ func uploadFile() http.HandlerFunc {
 	})
 }
 
+func listImages() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			http.Error(w, http.StatusText(405), 405)
+			return
+		}
+
+		imgs, err := db.ListAllImages()
+
+		if err != nil {
+			http.Error(w, http.StatusText(500), 500)
+			return
+		}
+		for _, img := range imgs {
+			fmt.Fprintln(w, img.ID, img.UUID, img.Descricao)
+		}
+	})
+}
+
 func renderError(w http.ResponseWriter, message string, statusCode int) {
 	w.WriteHeader(http.StatusBadRequest)
 	w.Write([]byte(message))
@@ -100,10 +121,12 @@ func createUUIDFileName(fileName string) string {
 
 func setupRoutes() {
 	http.HandleFunc("/upload", uploadFile())
+	http.HandleFunc("/imagens", listImages())
 	http.ListenAndServe(":8080", nil)
 }
 
 func main() {
 	fmt.Println("Hello World!!!")
+	db.InitDB("postgres://user:pass@localhost/image_server?sslmode=disable")
 	setupRoutes()
 }
