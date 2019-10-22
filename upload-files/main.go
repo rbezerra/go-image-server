@@ -87,7 +87,21 @@ func uploadFile() http.HandlerFunc {
 		//salvar referencia da imagem no banco
 		img := new(db.Imagem)
 		img.UUID = fileName
-		if err := db.InsertImage(img); err != nil {
+		imgID, err := db.InsertImage(img)
+		if err != nil {
+			renderError(w, "CANT_SAVE_IMAGE_INFO_ON DATABASE", http.StatusInternalServerError)
+			fmt.Println("CANT_SAVE_IMAGE_INFO_ON DATABASE")
+			fmt.Println(err)
+			return
+		}
+
+		//salvar referência do arquivo original
+		arq := new(db.Arquivo)
+		arq.Tamanho = "original"
+		arq.Path = newPath
+		arq.ImagemID = imgID
+		_, err = db.InsertArquivo(arq)
+		if err != nil {
 			renderError(w, "CANT_SAVE_FILE_INFO_ON DATABASE", http.StatusInternalServerError)
 			fmt.Println("CANT_SAVE_FILE_INFO_ON DATABASE")
 			fmt.Println(err)
