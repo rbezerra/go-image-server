@@ -52,3 +52,31 @@ func InsertImage(img *Imagem) (uint, error) {
 	}
 	return uint(id), nil
 }
+
+func GetImageByUUID(UUID string) (*Imagem, error) {
+	stmt, err := db.Prepare("SELECT id, uuid, descricao FROM public.imagem WHERE uuid = $1")
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(UUID)
+	if err != nil {
+		return nil, err
+	}
+
+	img := new(Imagem)
+	for rows.Next() {
+		err := rows.Scan(&img.ID, &img.UUID, &img.Descricao)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return img, nil
+
+}

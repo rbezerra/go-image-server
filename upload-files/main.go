@@ -182,6 +182,11 @@ func createStandardImages(originalFilePath string, originalFileBytes []byte, fil
 
 	file.Close()
 
+	DBImg, err := db.GetImageByUUID(fileName)
+	if err != nil {
+		return imagesCreated, err
+	}
+
 	for _, size := range standardSizes {
 		s := strings.Split(size, "x")
 		h, _ := strconv.ParseUint(s[0], 10, 32)
@@ -204,7 +209,6 @@ func createStandardImages(originalFilePath string, originalFileBytes []byte, fil
 
 		if filetype == "image/png" {
 			png.Encode(outFile, newImg)
-
 		}
 
 		if filetype == "image/jpeg" || filetype == "image/jpg" {
@@ -214,7 +218,16 @@ func createStandardImages(originalFilePath string, originalFileBytes []byte, fil
 		imagesCreated++
 
 		//salvar referencia na tabela de arquivo no banco
-
+		arq := new(db.Arquivo)
+		arq.ImagemID = DBImg.ID
+		arq.Path = newPath
+		arq.Tamanho = size
+		_, err = db.InsertArquivo(arq)
+		if err != nil {
+			fmt.Println("CANT_SAVE_FILE_INFO_ON DATABASE")
+			fmt.Println(err)
+			return imagesCreated, nil
+		}
 	}
 
 	return imagesCreated, nil
