@@ -3,19 +3,21 @@ package main
 import (
 	"crypto/rand"
 	"fmt"
+	"image/png"
 	"io/ioutil"
 	"log"
 	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"./db"
+	"github.com/disintegration/imaging"
 )
 
 const uploadPath = "./temp-images"
-
-var dimensions [5]string = [5]string{"75x75", "75x100", "180x240", "375x500", "768x1024"}
 
 func uploadFile() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -78,6 +80,13 @@ func uploadFile() http.HandlerFunc {
 			fmt.Println(err)
 			return
 		}
+
+		if imagesCreated, err := createStandardImages(newPath, fileBytes, fileName); err != nil || imagesCreated == 0 {
+			renderError(w, "CANT_CREATE_IMAGES", http.StatusInternalServerError)
+			fmt.Println("CANT_CREATE_IMAGES")
+			fmt.Println(err)
+		}
+
 		w.Write([]byte("SUCCESS"))
 	})
 }
@@ -117,6 +126,40 @@ func createUUIDFileName(fileName string) string {
 		b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
 
 	return fmt.Sprintf("img-%s", uuid)
+}
+
+func createStandardImages(originalFilePath string, originalFileBytes []byte, fileName string) (int, error) {
+	standardSizes := []string{"150x112", "100x75", "75x75", "75x100", "180x240", "375x500", "768x1024"}
+	imagesCreated := 0
+	filetype := http.DetectContentType(originalFileBytes)
+
+	src, err := imaging.Open(originalFilePath, imaging.AutoOrientation(true))
+	if err != nil {
+		return imagesCreated, err
+	}
+
+	for _, size := range standardSizes {
+
+		s := strings.Split(size, "x")
+		height, _ := strconv.Atoi(s[0])
+		width, _ := strconv.Atoi(s[1])
+		src = imaging.Resize(src, width, height, imaging.Lanczos)
+		fileEndings, err := mime.ExtensionsByType(filetype)
+		if err != nil {
+			return imagesCreated, err
+		}
+
+		newPath := filepath.Join(uploadPath, fileName+"-"+size+fileEndings[0])
+		if err := imaging.Save(src, newPath, imaging.JPEGQuality(100), imaging.PNGCompressionLevel(png.NoCompression)); err != nil {
+			fmt.Println(err)
+			return imagesCreated, err
+
+		}
+
+		imagesCreated++
+	}
+
+	return imagesCreated, nil
 }
 
 func setupRoutes() {
