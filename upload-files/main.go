@@ -84,6 +84,16 @@ func uploadFile() http.HandlerFunc {
 			return
 		}
 
+		//salvar referencia da imagem no banco
+		img := new(db.Imagem)
+		img.UUID = fileName
+		if err := db.InsertImage(img); err != nil {
+			renderError(w, "CANT_SAVE_FILE_INFO_ON DATABASE", http.StatusInternalServerError)
+			fmt.Println("CANT_SAVE_FILE_INFO_ON DATABASE")
+			fmt.Println(err)
+			return
+		}
+
 		if imagesCreated, err := createStandardImages(newPath, fileBytes, fileName); err != nil || imagesCreated == 0 {
 			renderError(w, "CANT_CREATE_IMAGES", http.StatusInternalServerError)
 			fmt.Println("CANT_CREATE_IMAGES")
@@ -188,6 +198,9 @@ func createStandardImages(originalFilePath string, originalFileBytes []byte, fil
 		}
 
 		imagesCreated++
+
+		//salvar referencia na tabela de arquivo no banco
+
 	}
 
 	return imagesCreated, nil

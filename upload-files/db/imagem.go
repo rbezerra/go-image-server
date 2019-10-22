@@ -30,3 +30,17 @@ func ListAllImages() ([]*Imagem, error) {
 
 	return imgs, nil
 }
+
+func InsertImage(img *Imagem) error {
+	stmt, err := db.Prepare("INSERT INTO public.imagem (uuid) VALUES ($1)")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	if _, err := stmt.Query(img.UUID); err != nil {
+		return err
+	}
+
+	return nil
+}
