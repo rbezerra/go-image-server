@@ -24,100 +24,100 @@ import (
 
 const uploadPath = "./temp-images"
 
-func uploadFile() http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r.ParseMultipartForm(10 << 20)
+func uploadFile(w http.ResponseWriter, r *http.Request) {
 
-		file, handler, err := r.FormFile("image")
+	r.ParseMultipartForm(10 << 20)
 
-		if err != nil {
-			renderError(w, "INVALID_FILE", http.StatusBadRequest)
-			fmt.Println("INVALID_FILE")
-			fmt.Println(err)
-			return
-		}
-		defer file.Close()
-		fmt.Printf("Uploaded File: %+v\n", handler.Filename)
-		fmt.Printf("File Size: %+v\n", handler.Size)
-		fmt.Printf("MIME Header: %+v\n", handler.Header)
+	file, handler, err := r.FormFile("image")
 
-		fileBytes, err := ioutil.ReadAll(file)
-		if err != nil {
-			renderError(w, "INVALID_FILE", http.StatusInternalServerError)
-			fmt.Println("INVALID_FILE")
-			fmt.Println(err)
-		}
+	if err != nil {
+		renderError(w, "INVALID_FILE", http.StatusBadRequest)
+		fmt.Println("INVALID_FILE")
+		fmt.Println(err)
+		return
+	}
+	defer file.Close()
+	fmt.Printf("Uploaded File: %+v\n", handler.Filename)
+	fmt.Printf("File Size: %+v\n", handler.Size)
+	fmt.Printf("MIME Header: %+v\n", handler.Header)
 
-		filetype := http.DetectContentType(fileBytes)
-		fileName := createUUIDFileName(handler.Filename)
-		switch filetype {
-		case "image/jpeg", "image/jpg", "image/gif", "image/png":
-		default:
-			renderError(w, "INVALID_FILE_TYPE", http.StatusBadRequest)
-			fmt.Println("INVALID_FILE_TYPE")
-			fmt.Println(err)
-			return
-		}
+	fileBytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		renderError(w, "INVALID_FILE", http.StatusInternalServerError)
+		fmt.Println("INVALID_FILE")
+		fmt.Println(err)
+	}
 
-		fileEndings, err := mime.ExtensionsByType(filetype)
-		if err != nil {
-			renderError(w, "CANT_READ_FILE_TYPE", http.StatusInternalServerError)
-			fmt.Println("CANT_READ_FILE_TYPE")
-			fmt.Println(err)
-			return
-		}
+	filetype := http.DetectContentType(fileBytes)
+	fileName := createUUIDFileName(handler.Filename)
+	switch filetype {
+	case "image/jpeg", "image/jpg", "image/gif", "image/png":
+	default:
+		renderError(w, "INVALID_FILE_TYPE", http.StatusBadRequest)
+		fmt.Println("INVALID_FILE_TYPE")
+		fmt.Println(err)
+		return
+	}
 
-		newPath := filepath.Join(uploadPath, fileName+fileEndings[0])
-		fmt.Printf("FileType: %s, File: %s\n", filetype, newPath)
+	fileEndings, err := mime.ExtensionsByType(filetype)
+	if err != nil {
+		renderError(w, "CANT_READ_FILE_TYPE", http.StatusInternalServerError)
+		fmt.Println("CANT_READ_FILE_TYPE")
+		fmt.Println(err)
+		return
+	}
 
-		newFile, err := os.Create(newPath)
-		if err != nil {
-			renderError(w, "CANT_WRITE_FILE", http.StatusInternalServerError)
-			fmt.Println("CANT_WRITE_FILE")
-			fmt.Println(err)
-			return
-		}
-		defer newFile.Close()
+	newPath := filepath.Join(uploadPath, fileName+fileEndings[0])
+	fmt.Printf("FileType: %s, File: %s\n", filetype, newPath)
 
-		if _, err := newFile.Write(fileBytes); err != nil || newFile.Close() != nil {
-			renderError(w, "CANT_WRITE_FILE", http.StatusInternalServerError)
-			fmt.Println("CANT_WRITE_FILE")
-			fmt.Println(err)
-			return
-		}
+	newFile, err := os.Create(newPath)
+	if err != nil {
+		renderError(w, "CANT_WRITE_FILE", http.StatusInternalServerError)
+		fmt.Println("CANT_WRITE_FILE")
+		fmt.Println(err)
+		return
+	}
+	defer newFile.Close()
 
-		//salvar referencia da imagem no banco
-		img := new(db.Imagem)
-		img.UUID = fileName
-		imgID, err := db.InsertImage(img)
-		if err != nil {
-			renderError(w, "CANT_SAVE_IMAGE_INFO_ON DATABASE", http.StatusInternalServerError)
-			fmt.Println("CANT_SAVE_IMAGE_INFO_ON DATABASE")
-			fmt.Println(err)
-			return
-		}
+	if _, err := newFile.Write(fileBytes); err != nil || newFile.Close() != nil {
+		renderError(w, "CANT_WRITE_FILE", http.StatusInternalServerError)
+		fmt.Println("CANT_WRITE_FILE")
+		fmt.Println(err)
+		return
+	}
 
-		//salvar referência do arquivo original
-		arq := new(db.Arquivo)
-		arq.Tamanho = "original"
-		arq.Path = newPath
-		arq.ImagemID = imgID
-		_, err = db.InsertArquivo(arq)
-		if err != nil {
-			renderError(w, "CANT_SAVE_FILE_INFO_ON DATABASE", http.StatusInternalServerError)
-			fmt.Println("CANT_SAVE_FILE_INFO_ON DATABASE")
-			fmt.Println(err)
-			return
-		}
+	//salvar referencia da imagem no banco
+	img := new(db.Imagem)
+	img.UUID = fileName
+	imgID, err := db.InsertImage(img)
+	if err != nil {
+		renderError(w, "CANT_SAVE_IMAGE_INFO_ON DATABASE", http.StatusInternalServerError)
+		fmt.Println("CANT_SAVE_IMAGE_INFO_ON DATABASE")
+		fmt.Println(err)
+		return
+	}
 
-		if imagesCreated, err := createStandardImages(newPath, fileBytes, fileName); err != nil || imagesCreated == 0 {
-			renderError(w, "CANT_CREATE_IMAGES", http.StatusInternalServerError)
-			fmt.Println("CANT_CREATE_IMAGES")
-			fmt.Println(err)
-		}
+	//salvar referência do arquivo original
+	arq := new(db.Arquivo)
+	arq.Tamanho = "original"
+	arq.Path = newPath
+	arq.ImagemID = imgID
+	_, err = db.InsertArquivo(arq)
+	if err != nil {
+		renderError(w, "CANT_SAVE_FILE_INFO_ON DATABASE", http.StatusInternalServerError)
+		fmt.Println("CANT_SAVE_FILE_INFO_ON DATABASE")
+		fmt.Println(err)
+		return
+	}
 
-		w.Write([]byte(fileName))
-	})
+	if imagesCreated, err := createStandardImages(newPath, fileBytes, fileName); err != nil || imagesCreated == 0 {
+		renderError(w, "CANT_CREATE_IMAGES", http.StatusInternalServerError)
+		fmt.Println("CANT_CREATE_IMAGES")
+		fmt.Println(err)
+	}
+
+	w.Write([]byte(fileName))
+
 }
 
 func listImages(w http.ResponseWriter, r *http.Request) {
@@ -231,7 +231,7 @@ func createStandardImages(originalFilePath string, originalFileBytes []byte, fil
 
 func setupRoutes() {
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/upload", uploadFile())
+	router.HandleFunc("/upload", uploadFile)
 	router.HandleFunc("/imagens", listImages)
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
