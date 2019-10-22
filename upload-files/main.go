@@ -3,6 +3,8 @@ package main
 import (
 	"crypto/rand"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"image/png"
 	"io/ioutil"
 	"log"
@@ -13,8 +15,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/nfnt/resize"
+
 	"./db"
-	"github.com/disintegration/imaging"
 )
 
 const uploadPath = "./temp-images"
@@ -87,7 +90,7 @@ func uploadFile() http.HandlerFunc {
 			fmt.Println(err)
 		}
 
-		w.Write([]byte("SUCCESS"))
+		w.Write([]byte(fileName))
 	})
 }
 
@@ -133,27 +136,55 @@ func createStandardImages(originalFilePath string, originalFileBytes []byte, fil
 	imagesCreated := 0
 	filetype := http.DetectContentType(originalFileBytes)
 
-	src, err := imaging.Open(originalFilePath, imaging.AutoOrientation(true))
+	file, err := os.Open(originalFilePath)
 	if err != nil {
 		return imagesCreated, err
 	}
 
-	for _, size := range standardSizes {
+	var img image.Image
+	if filetype == "image/png" {
+		img, err = png.Decode(file)
+		if err != nil {
+			return imagesCreated, err
+		}
+	}
 
+	if filetype == "image/jpg" || filetype == "image/jpeg" {
+		img, err = jpeg.Decode(file)
+		if err != nil {
+			return imagesCreated, err
+		}
+	}
+
+	file.Close()
+
+	for _, size := range standardSizes {
 		s := strings.Split(size, "x")
-		height, _ := strconv.Atoi(s[0])
-		width, _ := strconv.Atoi(s[1])
-		src = imaging.Resize(src, width, height, imaging.Lanczos)
+		h, _ := strconv.ParseUint(s[0], 10, 32)
+		w, _ := strconv.ParseUint(s[1], 10, 32)
+		height := uint(h)
+		width := uint(w)
+		newImg := resize.Resize(width, height, img, resize.NearestNeighbor)
+
 		fileEndings, err := mime.ExtensionsByType(filetype)
 		if err != nil {
 			return imagesCreated, err
 		}
 
 		newPath := filepath.Join(uploadPath, fileName+"-"+size+fileEndings[0])
-		if err := imaging.Save(src, newPath, imaging.JPEGQuality(100), imaging.PNGCompressionLevel(png.NoCompression)); err != nil {
-			fmt.Println(err)
+		outFile, err := os.Create(newPath)
+		if err != nil {
 			return imagesCreated, err
+		}
+		defer outFile.Close()
 
+		if filetype == "image/png" {
+			png.Encode(outFile, newImg)
+
+		}
+
+		if filetype == "image/jpeg" || filetype == "image/jpg" {
+			jpeg.Encode(outFile, newImg, nil)
 		}
 
 		imagesCreated++
