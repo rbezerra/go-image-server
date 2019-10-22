@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gorilla/mux"
+
 	"github.com/nfnt/resize"
 
 	"./db"
@@ -118,23 +120,17 @@ func uploadFile() http.HandlerFunc {
 	})
 }
 
-func listImages() http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
-			http.Error(w, http.StatusText(405), 405)
-			return
-		}
+func listImages(w http.ResponseWriter, r *http.Request) {
+	imgs, err := db.ListAllImages()
 
-		imgs, err := db.ListAllImages()
-
-		if err != nil {
-			http.Error(w, http.StatusText(500), 500)
-			return
-		}
-		for _, img := range imgs {
-			fmt.Fprintln(w, img.ID, img.UUID, img.Descricao)
-		}
-	})
+	if err != nil {
+		http.Error(w, http.StatusText(500), 500)
+		fmt.Println(err)
+		return
+	}
+	for _, img := range imgs {
+		fmt.Fprintln(w, img.ID, img.UUID, img.Descricao)
+	}
 }
 
 func renderError(w http.ResponseWriter, message string, statusCode int) {
@@ -234,9 +230,10 @@ func createStandardImages(originalFilePath string, originalFileBytes []byte, fil
 }
 
 func setupRoutes() {
-	http.HandleFunc("/upload", uploadFile())
-	http.HandleFunc("/imagens", listImages())
-	http.ListenAndServe(":8080", nil)
+	router := mux.NewRouter().StrictSlash(true)
+	router.HandleFunc("/upload", uploadFile())
+	router.HandleFunc("/imagens", listImages)
+	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
 func main() {

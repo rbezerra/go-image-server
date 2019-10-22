@@ -7,7 +7,7 @@ type Imagem struct {
 }
 
 func ListAllImages() ([]*Imagem, error) {
-	rows, err := db.Query("SELECT * FROM imagem")
+	rows, err := db.Query("SELECT id, uuid, descricao FROM imagem")
 	if err != nil {
 		return nil, err
 	}
