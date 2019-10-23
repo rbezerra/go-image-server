@@ -36,9 +36,6 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer file.Close()
-	fmt.Printf("Uploaded File: %+v\n", handler.Filename)
-	fmt.Printf("File Size: %+v\n", handler.Size)
-	fmt.Printf("MIME Header: %+v\n", handler.Header)
 
 	fileBytes, err := ioutil.ReadAll(file)
 	if err != nil {
@@ -136,17 +133,32 @@ func GetImage(w http.ResponseWriter, r *http.Request) {
 	uuid := mux.Vars(r)["uuid"]
 	tamanho := mux.Vars(r)["tamanho"]
 
-	file, err := db.GetFileByUUIDAndSize(uuid, tamanho)
+	img, err := db.GetImageByUUID(uuid)
 	if err != nil {
 		utils.RenderError(w, http.StatusText(500), http.StatusInternalServerError)
 		fmt.Println(err)
 		return
 	}
 
-	//se não for encotrado o arquivo deve ser gerado
-	if file == nil {
+	if img == nil {
 		utils.RenderError(w, http.StatusText(404), http.StatusNotFound)
+		return
 	} else {
+		file, err := db.GetFileByUUIDAndSize(uuid, tamanho)
+		if err != nil {
+			utils.RenderError(w, http.StatusText(500), http.StatusInternalServerError)
+			fmt.Println(err)
+			return
+		}
+
+		if file == nil {
+			//criar método para gerar arquivo no tamanho desejado
+			file, err = createNewFile(uuid, tamanho)
+			if err != nil {
+				utils.RenderError(w, http.StatusText(500), http.StatusInternalServerError)
+				fmt.Println(err)
+			}
+		}
 		json.NewEncoder(w).Encode(file)
 	}
 
@@ -177,7 +189,7 @@ func createStandardImages(originalFilePath string, originalFileBytes []byte, fil
 		}
 	}
 
-	file.Close()
+	defer file.Close()
 
 	DBImg, err := db.GetImageByUUID(fileName)
 	if err != nil {
@@ -228,4 +240,88 @@ func createStandardImages(originalFilePath string, originalFileBytes []byte, fil
 	}
 
 	return imagesCreated, nil
+}
+
+func createNewFile(uuid string, size string) (*db.Arquivo, error) {
+
+	//carregar imagem original
+	arqOriginal, err := db.GetFileByUUIDAndSize(uuid, "original")
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
+	file, err := os.Open(arqOriginal.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	fileBytes, err := ioutil.ReadFile(arqOriginal.Path)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
+	filetype := http.DetectContentType(fileBytes)
+	fileEndings, err := mime.ExtensionsByType(filetype)
+	if err != nil {
+		fmt.Println("CANT_READ_FILE_TYPE")
+		fmt.Println(err)
+		return nil, err
+	}
+
+	newPath := filepath.Join(uploadPath, uuid+"-"+size+fileEndings[0])
+
+	var img image.Image
+	if filetype == "image/png" {
+		img, err = png.Decode(file)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if filetype == "image/jpg" || filetype == "image/jpeg" {
+		img, err = jpeg.Decode(file)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	s := strings.Split(size, "x")
+	h, _ := strconv.ParseUint(s[0], 10, 32)
+	w, _ := strconv.ParseUint(s[1], 10, 32)
+	height := uint(h)
+	width := uint(w)
+	newImg := resize.Resize(width, height, img, resize.NearestNeighbor)
+
+	newFile, err := os.Create(newPath)
+	if err != nil {
+		fmt.Println("CANT_WRITE_FILE")
+		fmt.Println(err)
+		return nil, err
+	}
+	defer newFile.Close()
+
+	if filetype == "image/png" {
+		png.Encode(newFile, newImg)
+	}
+
+	if filetype == "image/jpeg" || filetype == "image/jpg" {
+		jpeg.Encode(newFile, newImg, nil)
+	}
+
+	arq := new(db.Arquivo)
+	arq.Tamanho = size
+	arq.Path = newPath
+	arq.ImagemID = arqOriginal.ImagemID
+	newID, err := db.InsertArquivo(arq)
+	if err != nil {
+		fmt.Println("CANT_SAVE_FILE_INFO_ON DATABASE")
+		fmt.Println(err)
+		return nil, err
+	}
+	arq.ID = newID
+
+	return arq, nil
+
 }

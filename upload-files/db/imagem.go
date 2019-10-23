@@ -66,11 +66,13 @@ func GetImageByUUID(UUID string) (*Imagem, error) {
 	}
 
 	img := new(Imagem)
-	for rows.Next() {
+	if rows.Next() {
 		err := rows.Scan(&img.ID, &img.UUID, &img.Descricao)
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		return nil, nil
 	}
 
 	if err = rows.Err(); err != nil {
