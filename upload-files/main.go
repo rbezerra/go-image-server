@@ -14,9 +14,9 @@ import (
 
 func setupRoutes() {
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/upload", handlers.UploadFile)
-	router.HandleFunc("/imagens", handlers.ListImages)
-	router.HandleFunc("/imagem/{uuid}/{tamanho}", handlers.GetImage)
+	router.HandleFunc("/upload", handlers.UploadFile).Methods("POST")
+	router.HandleFunc("/imagens", handlers.ListImages).Methods("GET")
+	router.HandleFunc("/imagem/{uuid}/{tamanho}", handlers.GetImage).Methods("GET")
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
