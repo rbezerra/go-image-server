@@ -1,6 +1,7 @@
-package main
+package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -13,9 +14,14 @@ import (
 	"strconv"
 	"strings"
 
-	"./db"
+	"github.com/gorilla/mux"
+
+	"../db"
+	"../utils"
 	"github.com/nfnt/resize"
 )
+
+const uploadPath = "./temp-images"
 
 func UploadFile(w http.ResponseWriter, r *http.Request) {
 
@@ -24,7 +30,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 	file, handler, err := r.FormFile("image")
 
 	if err != nil {
-		RenderError(w, "INVALID_FILE", http.StatusBadRequest)
+		utils.RenderError(w, "INVALID_FILE", http.StatusBadRequest)
 		fmt.Println("INVALID_FILE")
 		fmt.Println(err)
 		return
@@ -36,17 +42,17 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	fileBytes, err := ioutil.ReadAll(file)
 	if err != nil {
-		RenderError(w, "INVALID_FILE", http.StatusInternalServerError)
+		utils.RenderError(w, "INVALID_FILE", http.StatusInternalServerError)
 		fmt.Println("INVALID_FILE")
 		fmt.Println(err)
 	}
 
 	filetype := http.DetectContentType(fileBytes)
-	fileName := CreateUUIDFileName(handler.Filename)
+	fileName := utils.CreateUUIDFileName(handler.Filename)
 	switch filetype {
 	case "image/jpeg", "image/jpg", "image/gif", "image/png":
 	default:
-		RenderError(w, "INVALID_FILE_TYPE", http.StatusBadRequest)
+		utils.RenderError(w, "INVALID_FILE_TYPE", http.StatusBadRequest)
 		fmt.Println("INVALID_FILE_TYPE")
 		fmt.Println(err)
 		return
@@ -54,7 +60,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	fileEndings, err := mime.ExtensionsByType(filetype)
 	if err != nil {
-		RenderError(w, "CANT_READ_FILE_TYPE", http.StatusInternalServerError)
+		utils.RenderError(w, "CANT_READ_FILE_TYPE", http.StatusInternalServerError)
 		fmt.Println("CANT_READ_FILE_TYPE")
 		fmt.Println(err)
 		return
@@ -65,7 +71,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	newFile, err := os.Create(newPath)
 	if err != nil {
-		RenderError(w, "CANT_WRITE_FILE", http.StatusInternalServerError)
+		utils.RenderError(w, "CANT_WRITE_FILE", http.StatusInternalServerError)
 		fmt.Println("CANT_WRITE_FILE")
 		fmt.Println(err)
 		return
@@ -73,7 +79,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 	defer newFile.Close()
 
 	if _, err := newFile.Write(fileBytes); err != nil || newFile.Close() != nil {
-		RenderError(w, "CANT_WRITE_FILE", http.StatusInternalServerError)
+		utils.RenderError(w, "CANT_WRITE_FILE", http.StatusInternalServerError)
 		fmt.Println("CANT_WRITE_FILE")
 		fmt.Println(err)
 		return
@@ -84,7 +90,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 	img.UUID = fileName
 	imgID, err := db.InsertImage(img)
 	if err != nil {
-		RenderError(w, "CANT_SAVE_IMAGE_INFO_ON DATABASE", http.StatusInternalServerError)
+		utils.RenderError(w, "CANT_SAVE_IMAGE_INFO_ON DATABASE", http.StatusInternalServerError)
 		fmt.Println("CANT_SAVE_IMAGE_INFO_ON DATABASE")
 		fmt.Println(err)
 		return
@@ -97,14 +103,14 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 	arq.ImagemID = imgID
 	_, err = db.InsertArquivo(arq)
 	if err != nil {
-		RenderError(w, "CANT_SAVE_FILE_INFO_ON DATABASE", http.StatusInternalServerError)
+		utils.RenderError(w, "CANT_SAVE_FILE_INFO_ON DATABASE", http.StatusInternalServerError)
 		fmt.Println("CANT_SAVE_FILE_INFO_ON DATABASE")
 		fmt.Println(err)
 		return
 	}
 
 	if imagesCreated, err := createStandardImages(newPath, fileBytes, fileName); err != nil || imagesCreated == 0 {
-		RenderError(w, "CANT_CREATE_IMAGES", http.StatusInternalServerError)
+		utils.RenderError(w, "CANT_CREATE_IMAGES", http.StatusInternalServerError)
 		fmt.Println("CANT_CREATE_IMAGES")
 		fmt.Println(err)
 	}
@@ -117,13 +123,31 @@ func ListImages(w http.ResponseWriter, r *http.Request) {
 	imgs, err := db.ListAllImages()
 
 	if err != nil {
-		http.Error(w, http.StatusText(500), 500)
+		utils.RenderError(w, http.StatusText(500), http.StatusInternalServerError)
 		fmt.Println(err)
 		return
 	}
 	for _, img := range imgs {
 		fmt.Fprintln(w, img.ID, img.UUID, img.Descricao)
 	}
+}
+
+func GetImage(w http.ResponseWriter, r *http.Request) {
+	uuid := mux.Vars(r)["uuid"]
+	tamanho := mux.Vars(r)["tamanho"]
+
+	file, err := db.GetFileByUUIDAndSize(uuid, tamanho)
+	if err != nil {
+		utils.RenderError(w, http.StatusText(500), http.StatusInternalServerError)
+		fmt.Println(err)
+		return
+	}
+
+	if file == nil {
+		utils.RenderError(w, http.StatusText(404), http.StatusNotFound)
+	}
+
+	json.NewEncoder(w).Encode(file)
 }
 
 func createStandardImages(originalFilePath string, originalFileBytes []byte, fileName string) (int, error) {

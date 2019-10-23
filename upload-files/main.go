@@ -7,15 +7,16 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"./handlers"
+
 	"./db"
 )
 
-const uploadPath = "./temp-images"
-
 func setupRoutes() {
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/upload", UploadFile)
-	router.HandleFunc("/imagens", ListImages)
+	router.HandleFunc("/upload", handlers.UploadFile)
+	router.HandleFunc("/imagens", handlers.ListImages)
+	router.HandleFunc("/imagem/{uuid}/{tamanho}", handlers.GetImage)
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
