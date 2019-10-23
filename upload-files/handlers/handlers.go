@@ -28,6 +28,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 	r.ParseMultipartForm(10 << 20)
 
 	file, handler, err := r.FormFile("image")
+	descricao := r.FormValue("descricao")
 
 	if err != nil {
 		utils.RenderError(w, "INVALID_FILE", http.StatusBadRequest)
@@ -85,6 +86,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 	//salvar referencia da imagem no banco
 	img := new(db.Imagem)
 	img.UUID = fileName
+	img.Descricao = descricao
 	imgID, err := db.InsertImage(img)
 	if err != nil {
 		utils.RenderError(w, "CANT_SAVE_IMAGE_INFO_ON DATABASE", http.StatusInternalServerError)

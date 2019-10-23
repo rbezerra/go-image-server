@@ -32,14 +32,14 @@ func ListAllImages() ([]*Imagem, error) {
 }
 
 func InsertImage(img *Imagem) (uint, error) {
-	stmt, err := db.Prepare("INSERT INTO public.imagem (uuid) VALUES ($1) RETURNING id")
+	stmt, err := db.Prepare("INSERT INTO public.imagem (uuid, descricao) VALUES ($1, $2) RETURNING id")
 	if err != nil {
 		return 0, err
 	}
 	defer stmt.Close()
 
 	var id int
-	rows, err := stmt.Query(img.UUID)
+	rows, err := stmt.Query(img.UUID, img.Descricao)
 	if err != nil {
 		return 0, err
 	}
