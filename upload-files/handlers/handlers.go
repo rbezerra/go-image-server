@@ -143,11 +143,13 @@ func GetImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//se não for encotrado o arquivo deve ser gerado
 	if file == nil {
 		utils.RenderError(w, http.StatusText(404), http.StatusNotFound)
+	} else {
+		json.NewEncoder(w).Encode(file)
 	}
 
-	json.NewEncoder(w).Encode(file)
 }
 
 func createStandardImages(originalFilePath string, originalFileBytes []byte, fileName string) (int, error) {

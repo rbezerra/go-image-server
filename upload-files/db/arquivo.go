@@ -55,11 +55,13 @@ func GetFileByUUIDAndSize(uuid string, size string) (*Arquivo, error) {
 		return nil, err
 	}
 
-	for rows.Next() {
+	if rows.Next() {
 		err := rows.Scan(&file.ID, &file.ImagemID, &file.Tamanho, &file.Path)
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		return nil, nil
 	}
 
 	return file, nil
