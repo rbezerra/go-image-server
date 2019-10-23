@@ -1,9 +1,9 @@
 package db
 
 type Imagem struct {
-	ID        uint
-	UUID      string
-	Descricao string
+	ID        uint   `json:"ID"`
+	UUID      string `json:"UUID"`
+	Descricao string `json:"Descricao"`
 }
 
 func ListAllImages() ([]*Imagem, error) {

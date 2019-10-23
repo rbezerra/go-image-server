@@ -98,13 +98,14 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 	arq.Tamanho = "original"
 	arq.Path = newPath
 	arq.ImagemID = imgID
-	_, err = db.InsertArquivo(arq)
+	newID, err := db.InsertArquivo(arq)
 	if err != nil {
 		utils.RenderError(w, "CANT_SAVE_FILE_INFO_ON DATABASE", http.StatusInternalServerError)
 		fmt.Println("CANT_SAVE_FILE_INFO_ON DATABASE")
 		fmt.Println(err)
 		return
 	}
+	arq.ID = newID
 
 	if imagesCreated, err := createStandardImages(newPath, fileBytes, fileName); err != nil || imagesCreated == 0 {
 		utils.RenderError(w, "CANT_CREATE_IMAGES", http.StatusInternalServerError)
@@ -112,7 +113,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 
-	w.Write([]byte(fileName))
+	json.NewEncoder(w).Encode(arq)
 
 }
 
@@ -124,9 +125,9 @@ func ListImages(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 		return
 	}
-	for _, img := range imgs {
-		fmt.Fprintln(w, img.ID, img.UUID, img.Descricao)
-	}
+
+	json.NewEncoder(w).Encode(imgs)
+
 }
 
 func GetImage(w http.ResponseWriter, r *http.Request) {
