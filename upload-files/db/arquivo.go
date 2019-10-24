@@ -1,21 +1,24 @@
 package db
 
+import "database/sql"
+
 type Arquivo struct {
 	ID       uint   `json:"ID"`
 	ImagemID uint   `json:"ImagemID"`
 	Tamanho  string `json:"Tamanho"`
 	Path     string `json:"Path"`
+	Original bool   `json:"Original"`
 }
 
 func InsertArquivo(arq *Arquivo) (uint, error) {
-	stmt, err := db.Prepare("INSERT INTO public.arquivo(imagem_id, tamanho, path) VALUES ($1, $2, $3) RETURNING id")
+	stmt, err := db.Prepare("INSERT INTO public.arquivo(imagem_id, tamanho, path, original) VALUES ($1, $2, $3, $4) RETURNING id")
 	if err != nil {
 		return 0, err
 	}
 	defer stmt.Close()
 
 	var id int
-	rows, err := stmt.Query(arq.ImagemID, arq.Tamanho, arq.Path)
+	rows, err := stmt.Query(arq.ImagemID, arq.Tamanho, arq.Path, arq.Original)
 	if err != nil {
 		return 0, err
 	}
@@ -31,32 +34,63 @@ func InsertArquivo(arq *Arquivo) (uint, error) {
 }
 
 func GetFileByUUIDAndSize(uuid string, size string) (*Arquivo, error) {
-	file := new(Arquivo)
 
-	stmt, err := db.Prepare(`
+	sqlWithSize := `
 		SELECT 
 			a.id, 
 			a.imagem_id, 
 			a.tamanho, 
-			a.path 
+			a.path,
+			a.original
 		FROM 
 			public.arquivo a INNER JOIN public.imagem i ON a.imagem_id = i.id 
 		WHERE 
 			i.uuid = $1 AND 
 			a.tamanho = $2 
-	`)
+	`
+
+	sqlOriginalFile := `
+		SELECT 
+			a.id, 
+			a.imagem_id, 
+			a.tamanho, 
+			a.path,
+			a.original
+		FROM 
+			public.arquivo a INNER JOIN public.imagem i ON a.imagem_id = i.id 
+		WHERE 
+			i.uuid = $1 AND 
+			a.original = true 
+	`
+
+	file := new(Arquivo)
+
+	var sqlStmt string
+	if size != "" {
+		sqlStmt = sqlWithSize
+	} else {
+		sqlStmt = sqlOriginalFile
+	}
+
+	stmt, err := db.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(uuid, size)
+	var rows *sql.Rows
+	if size != "" {
+		rows, err = stmt.Query(uuid, size)
+	} else {
+		rows, err = stmt.Query(uuid)
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
 	if rows.Next() {
-		err := rows.Scan(&file.ID, &file.ImagemID, &file.Tamanho, &file.Path)
+		err := rows.Scan(&file.ID, &file.ImagemID, &file.Tamanho, &file.Path, &file.Original)
 		if err != nil {
 			return nil, err
 		}

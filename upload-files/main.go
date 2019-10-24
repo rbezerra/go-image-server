@@ -17,6 +17,7 @@ func setupRoutes() {
 	router.HandleFunc("/upload", handlers.UploadFile).Methods("POST")
 	router.HandleFunc("/imagens", handlers.ListImages).Methods("GET")
 	router.HandleFunc("/imagem/{uuid}/{tamanho}", handlers.GetImage).Methods("GET")
+	router.HandleFunc("/imagem/{uuid}/", handlers.GetImage).Methods("GET")
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
