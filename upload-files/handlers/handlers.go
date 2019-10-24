@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"image"
@@ -96,10 +97,13 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//salvar referência do arquivo original
+
+	imgDecoded, _, err := image.DecodeConfig(bytes.NewReader(fileBytes))
 	arq := new(db.Arquivo)
-	arq.Tamanho = "original"
 	arq.Path = newPath
 	arq.ImagemID = imgID
+	arq.Original = true
+	arq.Tamanho = strconv.Itoa(imgDecoded.Height) + "x" + strconv.Itoa(imgDecoded.Width)
 	newID, err := db.InsertArquivo(arq)
 	if err != nil {
 		utils.RenderError(w, "CANT_SAVE_FILE_INFO_ON DATABASE", http.StatusInternalServerError)
@@ -234,6 +238,7 @@ func createStandardImages(originalFilePath string, originalFileBytes []byte, fil
 		arq.ImagemID = DBImg.ID
 		arq.Path = newPath
 		arq.Tamanho = size
+		arq.Original = false
 		_, err = db.InsertArquivo(arq)
 		if err != nil {
 			fmt.Println("CANT_SAVE_FILE_INFO_ON DATABASE")
@@ -248,7 +253,7 @@ func createStandardImages(originalFilePath string, originalFileBytes []byte, fil
 func createNewFile(uuid string, size string) (*db.Arquivo, error) {
 
 	//carregar imagem original
-	arqOriginal, err := db.GetFileByUUIDAndSize(uuid, "original")
+	arqOriginal, err := db.GetFileByUUIDAndSize(uuid, "")
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
