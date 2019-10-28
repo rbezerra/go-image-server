@@ -1,0 +1,7 @@
+database:
+  hostname: ""
+  port: ""
+  name: ""
+  dbuser: ""
+  password: ""
+  sslmode: ""

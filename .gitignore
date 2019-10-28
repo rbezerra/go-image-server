@@ -1,3 +1,4 @@
 */**/.todo
-*/**/temp-images/*
-!*/**/temp-images/.gitkeep
+temp-images/*
+!temp-images/.gitkeep
+config.yml
