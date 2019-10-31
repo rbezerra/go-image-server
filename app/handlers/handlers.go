@@ -327,12 +327,12 @@ func createNewFile(uuid string, size string) (*db.Arquivo, error) {
 	}
 
 	s := strings.Split(size, "x")
-	h, errH := strconv.ParseUint(s[0], 10, 32)
+	h, errH := strconv.ParseUint(s[0], 10, 64)
 	if errH != nil {
 		fmt.Println(errH)
 		return nil, errH
 	}
-	w, errW := strconv.ParseUint(s[1], 10, 32)
+	w, errW := strconv.ParseUint(s[1], 10, 64)
 	if errW != nil {
 		fmt.Println(errW)
 		return nil, errW
