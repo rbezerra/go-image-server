@@ -12,6 +12,7 @@ services:
       - "8080:8080"
     env_file:
       - 'variables.env'
+    restart: on-failure
   db:
     build: ./db
     env_file:
