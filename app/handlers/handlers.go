@@ -184,8 +184,11 @@ func GetImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if file == nil {
-		utils.RenderError(w, http.StatusText(404), http.StatusNotFound)
-		return
+		file, err = createNewFile(uuid, tamanho)
+		if err != nil {
+			utils.RenderError(w, http.StatusText(500), http.StatusInternalServerError)
+			fmt.Println(err)
+		}
 	}
 
 	data, err := ioutil.ReadFile("/app/" + file.Path)
