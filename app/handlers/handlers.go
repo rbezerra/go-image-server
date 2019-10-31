@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -136,7 +137,7 @@ func ListImages(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func GetImage(w http.ResponseWriter, r *http.Request) {
+func GetImageInfo(w http.ResponseWriter, r *http.Request) {
 	uuid := mux.Vars(r)["uuid"]
 	tamanho := mux.Vars(r)["tamanho"]
 
@@ -169,6 +170,32 @@ func GetImage(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(file)
 	}
 
+}
+
+func GetImage(w http.ResponseWriter, r *http.Request) {
+	uuid := mux.Vars(r)["uuid"]
+	tamanho := mux.Vars(r)["tamanho"]
+
+	file, err := db.GetFileByUUIDAndSize(uuid, tamanho)
+	if err != nil {
+		utils.RenderError(w, http.StatusText(500), http.StatusInternalServerError)
+		fmt.Println(err)
+		return
+	}
+
+	if file == nil {
+		utils.RenderError(w, http.StatusText(404), http.StatusNotFound)
+		return
+	}
+
+	data, err := ioutil.ReadFile("/app/" + file.Path)
+	if err != nil {
+		utils.RenderError(w, http.StatusText(500), http.StatusInternalServerError)
+		fmt.Println(err)
+		return
+	}
+
+	http.ServeContent(w, r, file.Path, time.Now(), bytes.NewReader(data))
 }
 
 func createStandardImages(originalFilePath string, originalFileBytes []byte, fileName string) (int, error) {
