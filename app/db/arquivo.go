@@ -4,9 +4,10 @@ import "database/sql"
 
 type Arquivo struct {
 	ID       uint   `json:"ID"`
+	UUID     string `json:"UUID"`
+	Path     string `json:"Path"`
 	ImagemID uint   `json:"ImagemID"`
 	Tamanho  string `json:"Tamanho"`
-	Path     string `json:"Path"`
 	Original bool   `json:"Original"`
 }
 

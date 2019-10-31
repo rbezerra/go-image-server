@@ -105,6 +105,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 	arq.ImagemID = imgID
 	arq.Original = true
 	arq.Tamanho = strconv.Itoa(imgDecoded.Height) + "x" + strconv.Itoa(imgDecoded.Width)
+	arq.UUID = fileName
 	newID, err := db.InsertArquivo(arq)
 	if err != nil {
 		utils.RenderError(w, "CANT_SAVE_FILE_INFO_ON DATABASE", http.StatusInternalServerError)
