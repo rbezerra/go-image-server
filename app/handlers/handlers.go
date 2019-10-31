@@ -188,6 +188,7 @@ func GetImage(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			utils.RenderError(w, http.StatusText(500), http.StatusInternalServerError)
 			fmt.Println(err)
+			return
 		}
 	}
 
@@ -326,8 +327,17 @@ func createNewFile(uuid string, size string) (*db.Arquivo, error) {
 	}
 
 	s := strings.Split(size, "x")
-	h, _ := strconv.ParseUint(s[0], 10, 32)
-	w, _ := strconv.ParseUint(s[1], 10, 32)
+	h, errH := strconv.ParseUint(s[0], 10, 32)
+	if errH != nil {
+		fmt.Println(errH)
+		return nil, errH
+	}
+	w, errW := strconv.ParseUint(s[1], 10, 32)
+	if errW != nil {
+		fmt.Println(errW)
+		return nil, errW
+	}
+
 	height := uint(h)
 	width := uint(w)
 	newImg := resize.Resize(width, height, img, resize.NearestNeighbor)
