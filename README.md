@@ -4,7 +4,7 @@
 
  execute ```cp variables.example.env variables.env``` e preencha o arquivo com os dados para a conexão com o banco de dados
 
- execute ```docker-compose build && docker-compose up``` para criar as imagens e subir os containeres
+ execute ```docker-compose build && docker-compose up -d``` para criar as imagens e subir os containeres
     
 ## Rotas
 
