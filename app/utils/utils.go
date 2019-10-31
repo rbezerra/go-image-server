@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 )
 
 func CreateUUIDFileName(fileName string) string {
@@ -23,4 +24,12 @@ func CreateUUIDFileName(fileName string) string {
 func RenderError(w http.ResponseWriter, message string, statusCode int) {
 	w.WriteHeader(http.StatusBadRequest)
 	w.Write([]byte(message))
+}
+
+func GetEnvOrPanic(env string) string {
+	res := os.Getenv(env)
+	if len(env) == 0 {
+		panic("Mandatory env variable not found:" + env)
+	}
+	return res
 }

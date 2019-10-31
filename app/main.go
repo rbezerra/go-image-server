@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/spf13/viper"
@@ -12,6 +13,7 @@ import (
 
 	c "./config"
 	"./db"
+	"./utils"
 )
 
 func setupRoutes() {
@@ -36,6 +38,13 @@ func main() {
 
 	if err := viper.ReadInConfig(); err != nil {
 		fmt.Printf("Error reading config file, %s", err)
+	}
+
+	for _, k := range viper.AllKeys() {
+		value := viper.GetString(k)
+		if strings.HasPrefix(value, "${") && strings.HasSuffix(value, "}") {
+			viper.Set(k, utils.GetEnvOrPanic(strings.TrimSuffix(strings.TrimPrefix(value, "${"), "}")))
+		}
 	}
 
 	err := viper.Unmarshal(&configuration)

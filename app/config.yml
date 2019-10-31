@@ -1,0 +1,7 @@
+database:
+  hostname: "database"
+  port: ${DB_PORT}
+  dbname: ${DB_DATABASE}
+  dbuser: ${DB_USER}
+  password: ${DB_PASS}
+  sslmode: ${DB_SSL_MODE}

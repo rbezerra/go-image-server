@@ -10,10 +10,9 @@ services:
       - "db:database"
     ports: 
       - "8080:8080"
+    env_file:
+      - 'variables.env'
   db:
     build: ./db
-    environment:
-      - DB_USER=userdb
-      - DB_PASSWORD=pass
-      - DB_DATABASE=image_server
-      - POSTGRES_USER=user
+    env_file:
+      - 'variables.env'
