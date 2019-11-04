@@ -43,6 +43,7 @@ func InsertImage(img *Imagem) (uint, error) {
 	if err != nil {
 		return 0, err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		err := rows.Scan(&id)
@@ -64,6 +65,7 @@ func GetImageByUUID(UUID string) (*Imagem, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	img := new(Imagem)
 	if rows.Next() {

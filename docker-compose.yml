@@ -15,5 +15,6 @@ services:
     restart: on-failure
   db:
     build: ./db
+    command: postgres -c max_connections=1000 -c shared_buffers=1GB
     env_file:
       - 'variables.env'

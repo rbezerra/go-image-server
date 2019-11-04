@@ -23,6 +23,7 @@ func InsertArquivo(arq *Arquivo) (uint, error) {
 	if err != nil {
 		return 0, err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		err := rows.Scan(&id)
@@ -89,6 +90,7 @@ func GetFileByUUIDAndSize(uuid string, size string) (*Arquivo, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	if rows.Next() {
 		err := rows.Scan(&file.ID, &file.ImagemID, &file.Tamanho, &file.Path, &file.Original)

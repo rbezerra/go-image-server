@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"log"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -15,6 +16,10 @@ func InitDB(dataSourceName string) {
 	if err != nil {
 		log.Panic(err)
 	}
+
+	db.SetMaxOpenConns(500)
+	db.SetConnMaxLifetime(time.Hour)
+	db.SetMaxIdleConns(100)
 
 	if err = db.Ping(); err != nil {
 		log.Panic(err)

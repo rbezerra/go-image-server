@@ -53,8 +53,8 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 	case "image/jpeg", "image/jpg", "image/gif", "image/png":
 	default:
 		utils.RenderError(w, "INVALID_FILE_TYPE", http.StatusBadRequest)
-		fmt.Println("INVALID_FILE_TYPE")
-		fmt.Println(err)
+		fmt.Println("INVALID_FILE_TYPE", filetype)
+		fmt.Println(filetype)
 		return
 	}
 
@@ -114,12 +114,6 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	arq.ID = newID
-
-	if imagesCreated, err := createStandardImages(newPath, fileBytes, fileName); err != nil || imagesCreated == 0 {
-		utils.RenderError(w, "CANT_CREATE_IMAGES", http.StatusInternalServerError)
-		fmt.Println("CANT_CREATE_IMAGES")
-		fmt.Println(err)
-	}
 
 	json.NewEncoder(w).Encode(arq)
 
