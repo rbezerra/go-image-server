@@ -66,7 +66,19 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newPath := filepath.Join(uploadPath, fileName+fileEndings[0])
+	firstFolder := strings.Join(strings.Split(fileName, "")[4:6], "")
+	secondFolder := strings.Join(strings.Split(fileName, "")[6:8], "")
+
+	if _, err := os.Stat(filepath.Join(uploadPath, firstFolder, secondFolder)); os.IsNotExist(err) {
+		if err := os.MkdirAll(filepath.Join(uploadPath, firstFolder, secondFolder), 0700); err != nil {
+			utils.RenderError(w, "CANT_CREATE_DIRECTORY", http.StatusInternalServerError)
+			fmt.Println("CANT_CREATE_DIRECTORY")
+			fmt.Println(err)
+			return
+		}
+	}
+
+	newPath := filepath.Join(uploadPath, firstFolder, secondFolder, fileName+fileEndings[0])
 	fmt.Printf("FileType: %s, File: %s\n", filetype, newPath)
 
 	newFile, err := os.Create(newPath)
@@ -304,7 +316,18 @@ func createNewFile(uuid string, size string) (*db.Arquivo, error) {
 		return nil, err
 	}
 
-	newPath := filepath.Join(uploadPath, uuid+"-"+size+fileEndings[0])
+	firstFolder := strings.Join(strings.Split(uuid, "")[4:6], "")
+	secondFolder := strings.Join(strings.Split(uuid, "")[6:8], "")
+
+	if _, err := os.Stat(filepath.Join(uploadPath, firstFolder, secondFolder)); os.IsNotExist(err) {
+		if err := os.MkdirAll(filepath.Join(uploadPath, firstFolder, secondFolder), 0700); err != nil {
+			fmt.Println("CANT_CREATE_DIRECTORY")
+			fmt.Println(err)
+			return nil, err
+		}
+	}
+
+	newPath := filepath.Join(uploadPath, firstFolder, secondFolder, uuid+"-"+size+fileEndings[0])
 
 	var img image.Image
 	if filetype == "image/png" {

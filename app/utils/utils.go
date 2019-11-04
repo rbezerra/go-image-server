@@ -22,7 +22,7 @@ func CreateUUIDFileName(fileName string) string {
 }
 
 func RenderError(w http.ResponseWriter, message string, statusCode int) {
-	w.WriteHeader(http.StatusBadRequest)
+	w.WriteHeader(http.StatusInternalServerError)
 	w.Write([]byte(message))
 }
 
